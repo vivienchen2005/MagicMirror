@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from supabase import create_client, Client
 
+
 # Set up Flask app
 app = Flask(__name__)
 
@@ -78,20 +79,6 @@ def add_clothing_item():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-
-@app.route('/test', methods=['GET'])
-def get_clothing_item():
-    try:
-        response = supabase.table("clothing-items").select("*").execute()
-
-        if not response.data:
-            return jsonify({"error": "No items found."}), 404
-
-        return jsonify(response.data), 200
-    
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 ### GET
 
