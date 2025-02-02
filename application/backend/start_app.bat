@@ -11,17 +11,17 @@ call mm_env\Scripts\activate
 
 if "%choice%"=="1" (
     echo Starting Flask API...
-    start cmd /k "python api/routes.py"
+    start cmd /k "python run.py"
     timeout /t 2
     echo Starting 2DMapping script...
-    start cmd /k "python 2DMapping.py"
+    start cmd /k "python app/2DMapping.py"
     echo All processes started.
 ) else if "%choice%"=="2" (
     echo Starting Flask API...
-    start cmd /k "python api/routes.py"
+    start cmd /k "python run.py"
 ) else if "%choice%"=="3" (
     echo Starting 2DMapping script...
-    start cmd /k "python 2DMapping.py"
+    start cmd /k "python app/2DMapping.py"
 ) else if "%choice%"=="4" (
     echo Exiting...
     exit

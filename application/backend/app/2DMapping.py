@@ -119,11 +119,11 @@ desktop = True
 leftWristLocations = deque(maxlen=10)
 rightWristLocations = deque(maxlen=10)
 
-font_clothing_name = ImageFont.truetype("fonts/Inter/static/Inter_24pt-Bold.ttf", 20)
-font_clothing_type = ImageFont.truetype("fonts/Inter/static/Inter_24pt-Bold.ttf", 12)
+font_clothing_name = ImageFont.truetype("static/fonts/Inter/static/Inter_24pt-Bold.ttf", 20)
+font_clothing_type = ImageFont.truetype("static/fonts/Inter/static/Inter_24pt-Bold.ttf", 12)
 
-tops_json_path = "clothing/tops/tops.json"
-bottoms_json_path = "clothing/bottoms/bottoms.json"
+tops_json_path = "static/images/tops/tops.json"
+bottoms_json_path = "static/images/bottoms/bottoms.json"
 
 clothing_tops = load_clothing_data(tops_json_path)
 clothing_bottoms = load_clothing_data(bottoms_json_path)
@@ -216,12 +216,12 @@ with mp_pose.Pose(min_detection_confidence = 0.5, min_tracking_confidence = 0.5)
                 cv2.circle(frame, point, 5, (0, 255, 0), -1)
 
             # Overlay bottom
-            bottom_image = cv2.imread(os.path.join("clothing/bottoms", clothing_bottoms[clothing_bottoms_index]["file"]),cv2.IMREAD_UNCHANGED)
+            bottom_image = cv2.imread(os.path.join("static/images/bottoms", clothing_bottoms[clothing_bottoms_index]["file"]),cv2.IMREAD_UNCHANGED)
             bottom_image, transform = mapBottoms(lower_coords, bottom_image)
             frame = overlay_clothing(frame, bottom_image, transform)
             
             # Overlay top
-            top_image = cv2.imread(os.path.join("clothing/tops", clothing_tops[clothing_tops_index]["file"]),cv2.IMREAD_UNCHANGED)
+            top_image = cv2.imread(os.path.join("static/images/tops", clothing_tops[clothing_tops_index]["file"]),cv2.IMREAD_UNCHANGED)
             top_image, transform = mapTops(upper_coords, top_image)
             frame = overlay_clothing(frame, top_image, transform)
 

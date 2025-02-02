@@ -1,21 +1,8 @@
-import os
-from dotenv import load_dotenv
-from flask import Flask, request, jsonify
-from supabase import create_client, Client
+from flask import request, jsonify
+from . import app, supabase, SUPABASE_STORAGE_BUCKET
+import requests
 
 
-# Set up Flask app
-app = Flask(__name__)
-
-load_dotenv()
-
-# Get Supabase credentials from env file
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET")
-
-# Create Supabase client
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Sample route
 @app.route('/')
@@ -26,7 +13,7 @@ def home():
 
 ### POST
 
-@app.route('/app/clothing-items', methods=['POST'])
+@app.route('/clothing-items', methods=['POST'])
 def add_clothing_item():
     try:
         data = request.json
@@ -47,21 +34,33 @@ def add_clothing_item():
             "category": category,
             "brand": brand,
             "size": size,
-            "image_url": None
+            "image_url": image_url
         }).execute()
 
         if not response.data:
             return jsonify({"error": "Failed to insert clothing item"}), 500
 
         clothing_id = response.data[0]["id"]
-        filename = f"{clothing_id}.png"
-        image_path = f"{SUPABASE_STORAGE_BUCKET}/{filename}"
 
-        r = requests.get(image_url)
-        supabase.storage.from_(SUPABASE_STORAGE_BUCKET).upload(image_path, image_url.read(), content_type="image/png")
-        final_image_url = supabase.storage.from_(SUPABASE_STORAGE_BUCKET).get_public_url(image_path)
+        upload_url = f"{clothing_id}.png"
+        # final_image_url = f"clothing-images/{upload_url}"
+        # final_image_url = upload_url
 
-        supabase.table("clothing-items").update({"image_url": image_url}).select("*").eq("id", clothing_id).execute()
+        with open(image_url, 'rb') as f:
+            response = supabase.storage.from_("clothing-images").upload(
+                file=f,
+                path=upload_url,
+                file_options={"cache-control": "3600", "upsert": "false"},
+            )
+
+            if not response.path:
+                return jsonify({"error": "Failed to store image."}), 500
+                
+
+        final_image_url = f"clothing-images/{upload_url}"
+
+        supabase.table("clothing-items").update({"image_url": final_image_url}).eq("id", clothing_id).execute()
+
 
         return jsonify({
             "message": "Clothing item added",
@@ -72,7 +71,7 @@ def add_clothing_item():
                 "category": category,
                 "brand": brand,
                 "size": size,
-                "image_url": image_url
+                "image_url": upload_url
             }
         }), 201
 
@@ -81,12 +80,11 @@ def add_clothing_item():
 
 
 ### GET
-
 # clothing id -> clothing item
 @app.route('/clothing-items', methods=['GET'])
-def test_query():
+def get_clothing():
     try:
-        clothing_id = int(request.args.get("clothing_id")) 
+        clothing_id = request.args.get("clothing_id")
         name = request.args.get("name")
         category = request.args.get("category")
         clothing_type = request.args.get("clothing_type")
@@ -94,20 +92,22 @@ def test_query():
         query = supabase.table("clothing-items").select("*")
 
         if clothing_id:
-            query = query.eq("id", clothing_id)
+            query = query.eq("id", int(clothing_id))
         elif name:
             query = query.eq("name", name)
         elif category:
             query = query.eq("category", category)
         elif clothing_type:
             query = query.eq("clothing_type", clothing_type)
-        else:
-            return jsonify({"error": "Invalid Input. Must have id, name, category, or type."}), 400
 
         response = query.execute()
 
         if not response.data:
             return jsonify({"error": "No items found."}), 404
+        
+        # Return a single item if searching by clothing_id
+        if clothing_id:
+            return jsonify(response.data[0]), 200
 
         return jsonify(response.data), 200
     
@@ -116,8 +116,7 @@ def test_query():
 
 
 ### DELETE
-
-@app.route('/app/clothing-items/<int:clothing_id>', methods=['DELETE'])
+@app.route('/clothing-items/<int:clothing_id>', methods=['DELETE'])
 def delete_clothing_item(clothing_id):
     try:
         # Validate if item present
@@ -127,7 +126,7 @@ def delete_clothing_item(clothing_id):
             return jsonify({"error": f"Clothing item with ID {clothing_id} does not exist."}), 404
 
         # extract image url for supabase bucket deletion
-        image_url = response.data[0].image_url
+        image_url = response.data[0].get("image_url", None) 
             
         delete_response = supabase.table("clothing-items").delete().eq("id", clothing_id).execute()
 
@@ -135,7 +134,7 @@ def delete_clothing_item(clothing_id):
             return jsonify({"error": "Failed to delete item"}), 500
         
         if image_url:
-            image_path = image_url.split(f"/{SUPABASE_STORAGE_BUCKET}/")[-1] 
+            image_path = image_url.split(f"clothing-images/")[-1] 
             supabase.storage.from_(SUPABASE_STORAGE_BUCKET).remove([image_path])
         
 
@@ -143,9 +142,4 @@ def delete_clothing_item(clothing_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-
-if __name__ == '__main__':
-    app.run(debug=True)  # Runs the server in debug mode
 
